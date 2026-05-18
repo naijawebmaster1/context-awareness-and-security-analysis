@@ -1,4 +1,5 @@
 import os
+import json
 import cv2
 import numpy as np
 from skimage.feature import local_binary_pattern
@@ -88,17 +89,28 @@ class CASIAEvaluator:
         X_train, y_train = self._load_features('train')
         self.classifier.train(X_train, y_train)
         self.classifier.save_model(f"models/liveness_{self.mode}.pth")
-        
+
         X_test, y_test = self._load_features('test')
         preds = self.classifier.predict(X_test)
-        
+
         apcer = np.sum((preds == 1) & (y_test == 0)) / np.sum(y_test == 0)
         bpcer = np.sum((preds == 0) & (y_test == 1)) / np.sum(y_test == 1)
-        print(f"Mode: {self.mode}\nAPCER: {apcer*100:.2f}%\nBPCER: {bpcer*100:.2f}%\nACER: {(apcer+bpcer)*50:.2f}%")
+        acer  = (apcer + bpcer) * 50
+        print(f"Mode: {self.mode}\nAPCER: {apcer*100:.2f}%\nBPCER: {bpcer*100:.2f}%\nACER: {acer:.2f}%")
+
+        results_path = "results.json"
+        results = json.loads(open(results_path).read()) if os.path.exists(results_path) else {}
+        results[self.mode] = {
+            "APCER": round(apcer * 100, 2),
+            "BPCER": round(bpcer * 100, 2),
+            "ACER":  round(acer, 2),
+        }
+        with open(results_path, "w") as f:
+            json.dump(results, f, indent=2)
 
 if __name__ == "__main__":
     #Set your task
-    CHOSEN_MODE = 'nn_gradients' 
+    CHOSEN_MODE = 'nn_lpq' 
     dataset_path = "./casia-fasd"
     evaluator = CASIAEvaluator(dataset_path, CHOSEN_MODE)
     evaluator.evaluate()

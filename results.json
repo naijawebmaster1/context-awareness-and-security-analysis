@@ -1,0 +1,27 @@
+{
+  "nn_lpq": {
+    "APCER": 6.91,
+    "BPCER": 19.37,
+    "ACER": 13.14
+  },
+  "nn_gradients": {
+    "APCER": 31.58,
+    "BPCER": 33.06,
+    "ACER": 32.32
+  },
+  "nn_spatial_lbp": {
+    "APCER": 15.85,
+    "BPCER": 29.05,
+    "ACER": 22.45
+  },
+  "nn_raw_gray": {
+    "APCER": 6.91,
+    "BPCER": 19.37,
+    "ACER": 13.14
+  },
+  "nn_high_freq": {
+    "APCER": 9.64,
+    "BPCER": 19.24,
+    "ACER": 14.44
+  }
+}

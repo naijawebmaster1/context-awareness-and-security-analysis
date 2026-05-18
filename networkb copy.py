@@ -48,7 +48,11 @@ class MLPLivenessClassifier:
         num_live = (y == 1).sum()
         weight_ratio = num_spoof / (num_live + 1e-7)
         pos_weight_tensor = torch.tensor([weight_ratio], dtype=torch.float32).to(self.device)
-        criterion = nn.BCEWithLogitsLoss(pos_weight=pos _weight_tensor) //try to ytrain the network with different parameters eg 1 2 3 and expkain to find rhe best weighting parameters the result and chosen seight and insert in report and plot the teaining just run this. amd study rexplainaibility usint the shoewn tooks gradcom and tKW TBE BEST PARAMETER AND DPO THEEXPLAINIABILOI USE ALL AHD STUDY WHICH IONE IS BETTER AND PROVIDE REASON IN THE FREPORT DO RHE ANALYSIS OF WHAT ONE HAS SOME ADVANTAGEA AND SOME HAS SOMNE DRAWBACKS DO THE ANAKYSIS I DID THIS STUDY BECAUSE IT VWORKS THIS WAY. TRAINING THE MODEL AND SHOW HOW JUST CHANGUNG INE POARAMET MAKES TE RESUKT CHANGE AND ALSO. PASS THROUGH THE EXPLAINIBIITY TOOLS 
+        criterion = nn.BCEWithLogitsLoss(pos_weight=pos _weight_tensor) 
+        //try to ytrain the network with different parameters eg 1 2 3 and expkain to find rhe best weighting parameters the result and chosen seight and insert in report and plot the teaining just 
+        run this. amd study rexplainaibility usint the shoewn tooks gradcom and tKW TBE BEST PARAMETER AND DPO THEEXPLAINIABILOI USE ALL AHD STUDY WHICH IONE IS BETTER AND PROVIDE REASON IN THE 
+        FREPORT DO RHE ANALYSIS OF WHAT ONE HAS SOME ADVANTAGEA AND SOME HAS SOMNE DRAWBACKS DO THE ANAKYSIS I DID THIS STUDY BECAUSE IT VWORKS THIS WAY. TRAINING THE MODEL AND SHOW HOW JUST CHANGUNG
+         INE POARAMET MAKES TE RESUKT CHANGE AND ALSO. PASS THROUGH THE EXPLAINIBIITY TOOLS 
         STUDY THE METHODOLOGY GIVEN TO ME. AND TELL WHY AND WHAT INFO NIT EXATRACT 
         optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=1e-4)
 
