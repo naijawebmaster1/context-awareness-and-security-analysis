@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+from typing import Optional
 from main_nn import process_cropped_image
 from networkb import MLPLivenessClassifier, LivenessNet
 
@@ -40,8 +41,8 @@ class GradCAMForMLP:
     def __init__(self, model: LivenessNet):
         self.model = model
         self.model.eval()
-        self._acts: torch.Tensor | None = None
-        self._grads: torch.Tensor | None = None
+        self._acts: Optional[torch.Tensor] = None
+        self._grads: Optional[torch.Tensor] = None
         self._handles: list = []
         self._register_hooks()
 

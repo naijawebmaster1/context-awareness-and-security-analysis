@@ -87,7 +87,9 @@ class CASIAEvaluator:
 
     def evaluate(self):
         X_train, y_train = self._load_features('train')
-        self.classifier.train(X_train, y_train)
+        os.makedirs("models", exist_ok=True)
+        plot_path = f"models/training/loss_{self.mode}.png"
+        self.classifier.train(X_train, y_train, plot_path=plot_path)
         self.classifier.save_model(f"models/liveness_{self.mode}.pth")
 
         X_test, y_test = self._load_features('test')
@@ -99,7 +101,11 @@ class CASIAEvaluator:
         print(f"Mode: {self.mode}\nAPCER: {apcer*100:.2f}%\nBPCER: {bpcer*100:.2f}%\nACER: {acer:.2f}%")
 
         results_path = "results.json"
-        results = json.loads(open(results_path).read()) if os.path.exists(results_path) else {}
+        if os.path.exists(results_path):
+            with open(results_path) as f:
+                results = json.load(f)
+        else:
+            results = {}
         results[self.mode] = {
             "APCER": round(apcer * 100, 2),
             "BPCER": round(bpcer * 100, 2),
@@ -110,7 +116,7 @@ class CASIAEvaluator:
 
 if __name__ == "__main__":
     #Set your task
-    CHOSEN_MODE = 'nn_lpq' 
+    CHOSEN_MODE = 'nn_gradients' 
     dataset_path = "./casia-fasd"
     evaluator = CASIAEvaluator(dataset_path, CHOSEN_MODE)
     evaluator.evaluate()

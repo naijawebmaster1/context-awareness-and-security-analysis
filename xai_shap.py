@@ -5,7 +5,7 @@ import shap
 import matplotlib.pyplot as plt
 import torch
 from main_nn import process_cropped_image, CASIAEvaluator
-from networkb import MLPLivenessClassifier, LivenessNet
+from networkb import MLPLivenessClassifier
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
 DATASET_PATH = "./casia-fasd"
@@ -51,6 +51,7 @@ def explain_mode(mode):
     # SHAP needs a "background" distribution to compare against
     evaluator = CASIAEvaluator(DATASET_PATH, mode)
     X_train, y_train = evaluator._load_features('train')
+    np.random.seed(42)
     background = X_train[np.random.choice(len(X_train), size=100, replace=False)]
 
     # Build SHAP explainer

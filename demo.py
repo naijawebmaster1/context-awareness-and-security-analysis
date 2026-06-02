@@ -29,7 +29,7 @@ def extract_lpq_histogram(img, win_size=7, freq=1.0):
                np.real(q3), np.imag(q3), np.real(q4), np.imag(q4)]
     lpq_img = np.zeros(img.shape, dtype=np.uint8)
     for i, f in enumerate(filters):
-        response = convolve2d(img, f, mode='same', boundary='symm')q
+        response = convolve2d(img, f, mode='same', boundary='symm')
         lpq_img += (response > 0).astype(np.uint8) << i
     hist, _ = np.histogram(lpq_img.ravel(), bins=256, range=(0, 256))
     hist = hist.astype("float")
