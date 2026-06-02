@@ -5,7 +5,7 @@ from scipy.signal import convolve2d
 from skimage.feature import local_binary_pattern
 from networkb import MLPLivenessClassifier
 
-MODE = "nn_gradients"
+MODE = "nn_lpq"
 MODEL_PATH = f"models/liveness_{MODE}.pth"
 FACE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
@@ -41,7 +41,7 @@ def extract_features(face_bgr, mode):
     gray = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2GRAY)
     retinex = single_scale_retinex(gray)
 
-    if mode == "nn_gradients":
+    if mode == "nn_lpq":
         resized = cv2.resize(retinex, (64, 64))
         gx = cv2.Sobel(resized, cv2.CV_64F, 1, 0, ksize=3)
         gy = cv2.Sobel(resized, cv2.CV_64F, 0, 1, ksize=3)

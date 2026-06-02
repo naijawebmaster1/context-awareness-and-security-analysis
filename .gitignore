@@ -31,8 +31,6 @@ venv/
 # Project-specific: large data & generated outputs
 casia-fasd/
 extracted_features/
-models/
-xai_output/
 
 # Results (keep results.json tracked, exclude any raw dump files)
 *.npz
