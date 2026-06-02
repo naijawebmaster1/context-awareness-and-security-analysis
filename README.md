@@ -65,7 +65,7 @@ casia-fasd/
 Open `main_nn.py` and set `CHOSEN_MODE` at the bottom of the file to your desired feature type:
 
 ```python
-CHOSEN_MODE = 'nn_gradients'   # or nn_raw_gray, nn_spatial_lbp, nn_high_freq, nn_lpq
+CHOSEN_MODE = 'nn_lqp'   # or nn_raw_gray, nn_spatial_lbp, nn_high_freq, nn_lpq
 ```
 
 Then run:

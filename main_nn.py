@@ -116,7 +116,7 @@ class CASIAEvaluator:
 
 if __name__ == "__main__":
     #Set your task
-    CHOSEN_MODE = 'nn_gradients' 
+    CHOSEN_MODE = 'nn_lpq'
     dataset_path = "./casia-fasd"
     evaluator = CASIAEvaluator(dataset_path, CHOSEN_MODE)
     evaluator.evaluate()

@@ -7,11 +7,9 @@ from typing import Optional
 from main_nn import process_cropped_image
 from networkb import MLPLivenessClassifier, LivenessNet
 
-# ── CONFIG ───────────────────────────────────────────────────────────────────
 DATASET_PATH = "./casia-fasd"
 MODES = ['nn_gradients', 'nn_raw_gray', 'nn_spatial_lbp', 'nn_high_freq', 'nn_lpq']
 NUM_EXPLAIN_SAMPLES = 5
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 def load_sample_images(split, category, n=NUM_EXPLAIN_SAMPLES):
@@ -22,21 +20,7 @@ def load_sample_images(split, category, n=NUM_EXPLAIN_SAMPLES):
 
 
 class GradCAMForMLP:
-    """
-    Grad-CAM adapted for LivenessNet (MLP).
-
-    CNN Grad-CAM:  hooks last conv layer → alpha-weighted feature maps → upsample.
-    MLP Grad-CAM:  hooks last hidden layer (network[7], 32 units) → alpha-weighted
-                   activations → project back to input space via transposed weight
-                   matrices, yielding a (input_dim,) importance vector.
-    For the four 64×64 spatial modes this reshapes directly to a 64×64 heatmap.
-
-    LivenessNet.network indices:
-        [0] Linear(input→128)  [1] LeakyReLU  [2] Dropout
-        [3] Linear(128→64)     [4] LeakyReLU  [5] Dropout
-        [6] Linear(64→32)      [7] LeakyReLU  [8] Dropout
-        [9] Linear(32→1)
-    """
+    """Grad-CAM adapted for LivenessNet: hooks the last hidden layer and projects back to input space."""
 
     def __init__(self, model: LivenessNet):
         self.model = model
@@ -47,7 +31,7 @@ class GradCAMForMLP:
         self._register_hooks()
 
     def _register_hooks(self):
-        target = self.model.network[7]   # LeakyReLU after 3rd Linear (output dim=32)
+        target = self.model.network[7]
 
         def fwd_hook(module, inp, out):
             self._acts = out
@@ -64,12 +48,6 @@ class GradCAMForMLP:
         self._handles.clear()
 
     def compute(self, x_tensor: torch.Tensor):
-        """
-        Forward + backward pass.  Returns:
-          cam_input  (np.ndarray, input_dim): GradCAM importance projected to input
-          saliency   (np.ndarray, input_dim): |∂output/∂input| vanilla saliency
-          pred_prob  (float): sigmoid probability of 'live'
-        """
         self.model.zero_grad()
         x = x_tensor.clone().float().requires_grad_(True)
 
@@ -77,35 +55,23 @@ class GradCAMForMLP:
         pred_prob = torch.sigmoid(logit).item()
         logit.backward()
 
-        # ── Vanilla gradient saliency: |∂output/∂input| ───────────────────
         saliency = x.grad.abs().squeeze(0).detach().cpu().numpy()
 
-        # ── GradCAM at last hidden layer ───────────────────────────────────
-        # alpha_k = gradient of output w.r.t. k-th hidden unit (GradCAM weight)
-        # For 1-D feature vectors there is no spatial GAP step; alpha = gradient directly.
-        alpha = self._grads.squeeze(0).detach().cpu()   # (32,)
-        acts  = self._acts.squeeze(0).detach().cpu()    # (32,)
-        cam_hidden = torch.relu(alpha * acts)            # (32,) — Grad-CAM formula
+        alpha = self._grads.squeeze(0).detach().cpu()
+        acts  = self._acts.squeeze(0).detach().cpu()
+        cam_hidden = torch.relu(alpha * acts)
 
-        # ── Project cam_hidden back to input space via W^T chain ───────────
-        # nn.Linear weight shape: (out_features, in_features)
-        # so weight.T has shape:  (in_features, out_features)
-        # network[6]: Linear(64→32) → W6.T: (64,32)  applied to (32,) → (64,)
-        # network[3]: Linear(128→64)→ W3.T: (128,64) applied to (64,) → (128,)
-        # network[0]: Linear(in→128)→ W0.T: (in,128) applied to (128,) → (in,)
-        W6_T = self.model.network[6].weight.detach().cpu().T   # (64, 32)
-        W3_T = self.model.network[3].weight.detach().cpu().T   # (128, 64)
-        W0_T = self.model.network[0].weight.detach().cpu().T   # (input_dim, 128)
+        # project cam back to input space through transposed weight matrices
+        W6_T = self.model.network[6].weight.detach().cpu().T
+        W3_T = self.model.network[3].weight.detach().cpu().T
+        W0_T = self.model.network[0].weight.detach().cpu().T
 
-        proj = W6_T @ cam_hidden   # (64,)
-        proj = W3_T @ proj          # (128,)
-        cam_input = (W0_T @ proj).numpy()   # (input_dim,)
-        cam_input = np.abs(cam_input)
+        proj = W6_T @ cam_hidden
+        proj = W3_T @ proj
+        cam_input = np.abs((W0_T @ proj).numpy())
 
         return cam_input, saliency, pred_prob
 
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _normalize(arr: np.ndarray) -> np.ndarray:
     lo, hi = arr.min(), arr.max()
@@ -113,15 +79,12 @@ def _normalize(arr: np.ndarray) -> np.ndarray:
 
 
 def _colorize(heatmap_2d: np.ndarray, orig_img: np.ndarray):
-    """Return (jet_heatmap_uint8_rgb, alpha_blend_overlay) from a [0,1] 2D heatmap."""
     h, w = orig_img.shape[:2]
     hm = cv2.resize(heatmap_2d.astype(np.float32), (w, h))
     hm_color = (plt.cm.jet(hm)[:, :, :3] * 255).astype(np.uint8)
     overlay = cv2.addWeighted(orig_img, 0.5, hm_color, 0.5, 0)
     return hm_color, overlay
 
-
-# ── Per-mode explanation ─────────────────────────────────────────────────────
 
 def explain_mode_gradcam(mode: str):
     print(f"\n{'='*60}")
@@ -156,7 +119,6 @@ def explain_mode_gradcam(mode: str):
         orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
 
         if mode == 'nn_lpq':
-            # LPQ outputs a 256-dim histogram — no spatial reshape possible, use bar charts
             fig, axes = plt.subplots(1, 3, figsize=(18, 4))
 
             axes[0].imshow(orig_img)
@@ -175,7 +137,6 @@ def explain_mode_gradcam(mode: str):
             axes[2].set_xlabel("Bin index")
 
         else:
-            # Spatial modes: 4096 features → 64×64 heatmap
             cam_2d = _normalize(cam_input.reshape(64, 64))
             sal_2d = _normalize(saliency.reshape(64, 64))
 
@@ -184,7 +145,6 @@ def explain_mode_gradcam(mode: str):
 
             fig, axes = plt.subplots(2, 3, figsize=(16, 9))
 
-            # Row 0: Grad-CAM (last hidden layer → input projection)
             axes[0, 0].imshow(orig_img)
             axes[0, 0].axis('off')
             axes[0, 0].set_title(f"Original\nTrue: {true_label}")
@@ -197,7 +157,6 @@ def explain_mode_gradcam(mode: str):
             axes[0, 2].axis('off')
             axes[0, 2].set_title(f"Grad-CAM overlay\nPred: {pred_label} ({pred_prob:.2f})")
 
-            # Row 1: Vanilla gradient saliency for comparison
             axes[1, 0].imshow(orig_img)
             axes[1, 0].axis('off')
             axes[1, 0].set_title("Original")
@@ -224,8 +183,6 @@ def explain_mode_gradcam(mode: str):
 
     gradcam.remove_hooks()
 
-
-# ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     for mode in MODES:

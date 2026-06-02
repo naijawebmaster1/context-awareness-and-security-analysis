@@ -7,12 +7,10 @@ from lime import lime_tabular
 from main_nn import process_cropped_image, CASIAEvaluator
 from networkb import MLPLivenessClassifier
 
-# ── CONFIG ───────────────────────────────────────────────────────────────────
 DATASET_PATH = "./casia-fasd"
 MODES = ['nn_gradients', 'nn_raw_gray', 'nn_spatial_lbp', 'nn_high_freq', 'nn_lpq']
 NUM_EXPLAIN_SAMPLES = 5
-NUM_LIME_FEATURES = 50   # top features LIME selects per explanation
-# ─────────────────────────────────────────────────────────────────────────────
+NUM_LIME_FEATURES = 50
 
 
 def load_sample_images(split, category, n=NUM_EXPLAIN_SAMPLES):
@@ -23,7 +21,7 @@ def load_sample_images(split, category, n=NUM_EXPLAIN_SAMPLES):
 
 
 def make_predict_fn(model, device):
-    """Return [[P(spoof), P(live)]] per sample — required by LIME's classification API."""
+    """Return [[P(spoof), P(live)]] per sample required by LIME's classification API."""
     def predict(X):
         tensor = torch.tensor(X, dtype=torch.float32).to(device)
         with torch.no_grad():
@@ -34,7 +32,6 @@ def make_predict_fn(model, device):
 
 
 def lime_weights_to_array(explanation, label_idx, feature_dim):
-    """Unpack LIME's sparse [(feature_index, weight)] list into a dense vector."""
     arr = np.zeros(feature_dim)
     for feat_idx, weight in explanation.local_exp[label_idx]:
         arr[feat_idx] = weight
@@ -56,7 +53,6 @@ def explain_mode(mode):
     device = classifier.device
     predict_fn = make_predict_fn(model, device)
 
-    # Load training features to anchor the LIME neighbourhood distribution
     evaluator = CASIAEvaluator(DATASET_PATH, mode)
     X_train, _ = evaluator._load_features('train')
     feature_dim = X_train.shape[1]
@@ -88,13 +84,12 @@ def explain_mode(mode):
             predict_fn,
             num_features=NUM_LIME_FEATURES,
             num_samples=1000,
-            labels=(1,),   # explain class 1 (live)
+            labels=(1,),
         )
 
         pred_prob = predict_fn(feat.reshape(1, -1))[0, 1]
         pred_label = "live" if pred_prob >= 0.5 else "spoof"
 
-        # Dense weight array for class 1 (live); positive = supports live, negative = supports spoof
         lime_arr = lime_weights_to_array(explanation, label_idx=1, feature_dim=feature_dim)
 
         orig_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB)
@@ -113,12 +108,10 @@ def explain_mode(mode):
             axes[1].set_ylabel("LIME weight")
 
         else:
-            # 4096-dim → 64×64 signed heatmap
             heatmap = lime_arr.reshape(64, 64)
             abs_max = np.abs(heatmap).max() + 1e-8
-            heatmap_norm = heatmap / abs_max   # range [-1, 1]
+            heatmap_norm = heatmap / abs_max
 
-            # PiYG: green = positive (live signal), purple = negative (spoof signal)
             heatmap_color = (plt.cm.PiYG((heatmap_norm + 1) / 2)[:, :, :3] * 255).astype(np.uint8)
 
             h, w = orig_img.shape[:2]
